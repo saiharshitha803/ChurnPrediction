@@ -186,38 +186,29 @@ y_pred_proba_svm = svm_model.predict_proba(X_test)[:, 1]
 print("\n--- SVM Performance ---")
 print(f"AUC-ROC Score: {roc_auc_score(y_test, y_pred_proba_svm):.6f}")
 
-import lightgbm as lgb
+# We use class_weight='balanced' to address the severe churn imbalance.
+# max_depth=5 is set to prevent extreme overfitting in a single tree.
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import roc_auc_score
-
-# Assuming data preparation (X_train, X_test, y_train, y_test) is complete
-# X_train contains the scaled numerical features and the one-hot encoded categorical features.
-
-# Calculate the imbalance ratio
-# ratio = (Count of No Churn) / (Count of Churn) approx 14.38
-ratio = sum(y_train == 0) / sum(y_train == 1)
-
-# Initialize Model: LightGBM Classifier
-lgb_model = lgb.LGBMClassifier(
-    objective='binary',
-    metric='auc',
-    n_estimators=100,
-    # Crucial for imbalance: gives more weight to the minority class
-    scale_pos_weight=ratio,
-    random_state=42,
-    n_jobs=-1 # Use all available cores for speed
+dt_model = DecisionTreeClassifier(
+    class_weight='balanced', 
+    max_depth=5, 
+    random_state=42
 )
 
 # Train the Model
-print("Training LightGBM Classifier...")
-lgb_model.fit(X_train, y_train)
+dt_model.fit(X_train, y_train)
 
-# Predict Probabilities
-y_pred_proba_lgb = lgb_model.predict_proba(X_test)[:, 1]
+# Predict Probabilities on the test set
+y_pred_proba_dt = dt_model.predict_proba(X_test)[:, 1]
 
-# Evaluate Performance
-print("\n--- LightGBM Performance ---")
-print(f"AUC-ROC Score: {roc_auc_score(y_test, y_pred_proba_lgb):.6f}")
+# Calculate AUC-ROC Score
+auc_roc_dt = roc_auc_score(y_test, y_pred_proba_dt)
 
+# --- 3. Output Results ---
+print("--- Decision Tree Classifier Performance ---")
+print(f"Model: Decision Tree (Max Depth=5)")
+print(f"AUC-ROC Score: {auc_roc_dt:.6f}")
 # You would then compare this AUC-ROC score against Random Forest's 0.601134.
 
 import pandas as pd
@@ -228,16 +219,16 @@ import matplotlib.pyplot as plt
 # you get after training all six models in your Colab notebook.
 results_data = {
     'Model': [
-        'LightGBM',
+        'DecisionTree',
         'XGBoost',
         'Random Forest',
-        'Gradient Boosting',
+        'GradientBoosting',
         'SVM (Linear)',
         'Logistic Regression'
     ],
     'AUC-ROC': [
-        0.5765,
-        0.588125,
+        0.5468,
+        0.58886,
         0.601134,
         0.586533,
         0.564329,
